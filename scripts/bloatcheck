@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if [ $# -ne 2 ]
 then
@@ -31,7 +31,7 @@ do_bloatcheck()
 
     if [ "$LASTNAME" != "$THISNAME" ]
     then
-      TOTAL=$(($TOTAL+$DELTA))
+      TOTAL=$((TOTAL+DELTA))
       [ $DELTA -ne 0 ] && addline
       LASTNAME="$THISNAME"
       DELTA=0
@@ -40,17 +40,17 @@ do_bloatcheck()
     fi
 
     SIZE=$(printf "%d" "0x$b")
-    if [ "$a" == "-" ]
+    if [ "$a" = "-" ]
     then
-      OLD=$(($OLD+$SIZE))
-      SIZE=$((-1*$SIZE))
+      OLD=$((OLD+SIZE))
+      SIZE=$((-1*SIZE))
     else
-      NEW=$(($NEW+$SIZE))
+      NEW=$((NEW+SIZE))
     fi
-    DELTA=$(($DELTA+$SIZE))
+    DELTA=$((DELTA+SIZE))
   done
 
-  TOTAL=$(($TOTAL+$DELTA))
+  TOTAL=$((TOTAL+DELTA))
   [ $DELTA -ne 0 ] && addline
 
   echo "$STUFF" | sort -k4,4nr
@@ -58,10 +58,10 @@ do_bloatcheck()
   printf "% 71d total\n" "$TOTAL"
 }
 
-DIFF1=`mktemp base.XXXXXXX`
-DIFF2=`mktemp bloat.XXXXXXX`
+DIFF1=$(mktemp base.XXXXXXX)
+DIFF2=$(mktemp bloat.XXXXXXX)
 trap "rm $DIFF1 $DIFF2" EXIT
-nm --size-sort "$1" | sort -k3,3 > $DIFF1
-nm --size-sort "$2" | sort -k3,3 > $DIFF2
-diff -U 0 $DIFF1 $DIFF2 | tail -n +3 | sed -n 's/^\([-+]\)/\1 /p' \
+nm --size-sort "$1" | sort -k3,3 > "$DIFF1"
+nm --size-sort "$2" | sort -k3,3 > "$DIFF2"
+diff -U 0 "$DIFF1" "$DIFF2" | tail -n +3 | sed -n 's/^\([-+]\)/\1 /p' \
   | sort -k4,4 | do_bloatcheck
