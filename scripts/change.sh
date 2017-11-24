@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # build each command as a standalone executable
 
@@ -12,10 +12,10 @@ mkdir -p "$PREFIX" || exit 1
 # sh - shell builtins like "cd" and "exit" need the multiplexer
 # help - needs to know what other commands are enabled (use command --help)
 
-for i in $(generated/instlist | egrep -vw "sh|help")
+for i in $(generated/instlist | grep -Evw "sh|help")
 do
-  echo -n " $i" &&
-  scripts/single.sh $i > /dev/null 2>$PREFIX/${i}.bad &&
-    rm $PREFIX/${i}.bad || echo -n '*'
+  printf " %s" "$i" &&
+  scripts/single.sh "$i" > /dev/null 2>"$PREFIX/${i}.bad" &&
+    rm "$PREFIX/${i}.bad" || printf '*'
 done
 echo
