@@ -1,35 +1,34 @@
-#!/bin/bash
-
+#!/bin/sh
 # This has to be a separate file from scripts/make.sh so it can be called
 # before menuconfig.  (It's called again from scripts/make.sh just to be sure.)
 
 mkdir -p generated
 
-source configure
+. configure
 
 probecc()
 {
-  ${CROSS_COMPILE}${CC} $CFLAGS -xc -o /dev/null $1 -
+  "${CROSS_COMPILE}${CC}" ${CFLAGS} -xc -o /dev/null "$1" -
 }
 
 # Probe for a single config symbol with a "compiles or not" test.
 # Symbol name is first argument, flags second, feed C file to stdin
 probesymbol()
 {
-  probecc $2 2>/dev/null && DEFAULT=y || DEFAULT=n
+  probecc "$2" 2>/dev/null && DEFAULT=y || DEFAULT=n
   rm a.out 2>/dev/null
-  echo -e "config $1\n\tbool" || exit 1
-  echo -e "\tdefault $DEFAULT\n" || exit 1
+  printf 'config %s\n\tbool'  "$1" || exit 1
+  printf '\tdefault %s\n' "$DEFAULT" || exit 1
 }
 
 probeconfig()
 {
-  > generated/cflags
+  touch generated/cflags
   # llvm produces its own really stupid warnings about things that aren't wrong,
   # and although you can turn the warning off, gcc reacts badly to command line
   # arguments it doesn't understand. So probe.
-  [ -z "$(probecc -Wno-string-plus-int <<< \#warn warn 2>&1 | grep string-plus-int)" ] &&
-    echo -Wno-string-plus-int >> generated/cflags
+  printf '#warn warn' | probecc -Wno-string-plus-int 2>&1 | grep -q string-plus-int &&
+    printf '%s\n' '-Wno-string-plus-int' >> generated/cflags
 
   # Probe for container support on target
   probesymbol TOYBOX_CONTAINER << EOF
@@ -95,7 +94,7 @@ EOF
     #include <unistd.h>
     int main(int argc, char *argv[]) { return fork(); }
 EOF
-  echo -e '\tdepends on !TOYBOX_MUSL_NOMMU_IS_BROKEN'
+  printf '\tdepends on !TOYBOX_MUSL_NOMMU_IS_BROKEN\n'
 
   probesymbol TOYBOX_PRLIMIT << EOF
     #include <sys/time.h>
@@ -114,15 +113,14 @@ genconfig()
 
     [ $(ls "$DIR" | wc -l) -lt 2 ] && continue
 
-    echo "menu \"$(head -n 1 $j)\""
+    echo "menu \"$(head -n 1 "$j")\""
     echo
 
     # extract config stanzas from each source file, in alphabetical order
-    for i in $(ls -1 $DIR/*.c)
-    do
+    for i in $DIR/*.c; do
       # Grab the config block for Config.in
       echo "# $i"
-      sed -n '/^\*\//q;/^config [A-Z]/,$p' $i || return 1
+      sed -n '/^\*\//q;/^config [A-Z]/,$p' "$i" || return 1
       echo
     done
 
@@ -145,16 +143,17 @@ PENDING=
 toys toys/*/*.c | (
 while IFS=":" read FILE NAME
 do
-  [ "$NAME" == help ] && continue
-  [ "$NAME" == install ] && continue
-  echo -e "$NAME: $FILE *.[ch] lib/*.[ch]\n\tscripts/single.sh $NAME\n"
-  echo -e "test_$NAME:\n\tscripts/test.sh $NAME\n"
-  [ "${FILE/pending//}" != "$FILE" ] &&
-    PENDING="$PENDING $NAME" ||
-    WORKING="$WORKING $NAME"
+  [ "$NAME" = "help" ] && continue
+  [ "$NAME" = "install" ] && continue
+  printf '%s: %s *.[ch] '"lib/*.[ch]"'\n\tscripts/single.sh %s\n' "$NAME" "$FILE" "$NAME"
+  printf 'test_%s:\n\tscripts/test.sh %s\n' "$NAME" "$NAME"
+  case "$FILE" in
+  *pending*)WORKING="$WORKING $NAME";;
+  *)PENDING="$PENDING $NAME";;
+  esac
 done &&
-echo -e "clean::\n\trm -f $WORKING $PENDING" &&
-echo -e "list:\n\t@echo $(echo $WORKING | tr ' ' '\n' | sort | xargs)" &&
-echo -e "list_pending:\n\t@echo $(echo $PENDING | tr ' ' '\n' | sort | xargs)" &&
-echo -e ".PHONY: $WORKING $PENDING" | sed 's/ \([^ ]\)/ test_\1/g'
+printf 'clean::\n\trm -f %s %s\n' "$WORKING" "$PENDING" &&
+printf 'list:\n\t@echo %s' "$(echo "$WORKING" | tr ' ' '\n' | sort | xargs)" &&
+printf 'list_pending:\n\t@echo %s' "$(echo "$PENDING" | tr ' ' '\n' | sort | xargs)" &&
+printf '.PHONY: %s %s' "$WORKING" "$PENDING" | sed 's/ \([^ ]\)/ test_\1/g'
 ) > .singlemake
