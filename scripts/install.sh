@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 
 # Grab default values for $CFLAGS and such.
 
-source ./configure
+. ./configure
 
 [ -z "$PREFIX" ] && PREFIX="/usr/toybox"
 
@@ -11,21 +11,13 @@ source ./configure
 LONG_PATH=""
 while [ ! -z "$1" ]
 do
-  # Create symlinks instead of hardlinks?
-  [ "$1" == "--symlink" ] && LINK_TYPE="-s"
-
-  # Uninstall?
-  [ "$1" == "--uninstall" ] && UNINSTALL=Uninstall
-
-  # Delete destination command if it exists?
-  [ "$1" == "--force" ] && DO_FORCE="-f"
-
-  # Use {,usr}/{bin,sbin} paths instead of all files in one directory?
-  [ "$1" == "--long" ] && LONG_PATH="bin/"
-
-  # Symlink host toolchain binaries to destination to create cross compile $PATH
-  [ "$1" == "--airlock" ] && AIRLOCK=1
-
+  case "$1" in
+  "--symlink")LINK_TYPE="-s";;        # Create symlinks instead of hardlinks?
+  "--uninstall")UNINSTALL=Uninstall;; # Uninstall?
+  "--force")DO_FORCE="-f";;           # Delete destination command if it exists?
+  "--long")LONG_PATH="bin/";; #Use {,usr}/{,s}bin instead of all files in 1 dir?
+  "--airlock")AIRLOCK=1;; #Symlink host binaries to dest for cross compile $PATH
+  esac
   shift
 done
 
@@ -86,9 +78,9 @@ do
   # Create link
   if [ -z "$UNINSTALL" ]
   then
-    ln $DO_FORCE $LINK_TYPE ${DOTPATH}toybox $i || EXIT=1
+    ln $DO_FORCE $LINK_TYPE ${DOTPATH}toybox "$i" || EXIT=1
   else
-    rm -f $i || EXIT=1
+    rm -f "$i" || EXIT=1
   fi
 done
 
@@ -133,7 +125,7 @@ then
         ln -sf "$j" "$FALLBACK/$i" || exit 1
       fi
 
-      X=$[$X+1]
+      X=$((X+1))
       FALLBACK="$PREFIX/fallback-$X"
     done
 
