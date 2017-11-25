@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Build a standalone toybox command
 
@@ -21,8 +21,8 @@ touch -c .config
 export KCONFIG_CONFIG=.singleconfig
 for i in "$@"
 do
-  echo -n "$i:"
-  TOYFILE="$(egrep -l "TOY[(]($i)[ ,]" toys/*/*.c)"
+  printf '%s:' "$i"
+  TOYFILE="$(grep -El "TOY[(]($i)[ ,]" toys/*/*.c)"
 
   if [ -z "$TOYFILE" ]
   then
@@ -31,9 +31,9 @@ do
   fi
 
   # Enable stuff this command depends on
-  DEPENDS="$(sed -n "/^config *$i"'$/,/^$/{s/^[ \t]*depends on //;T;s/[!][A-Z0-9_]*//g;s/ *&& */|/g;p}' $TOYFILE | xargs | tr ' ' '|')"
+  DEPENDS="$(sed -n "/^config *$i"'$/,/^$/{s/^[ \t]*depends on //;T;s/[!][A-Z0-9_]*//g;s/ *&& */|/g;p}' "$TOYFILE" | xargs | tr ' ' '|')"
 
-  NAME=$(echo $i | tr a-z- A-Z_)
+  NAME=$(echo "$i" | tr a-z- A-Z_)
   make allnoconfig > /dev/null &&
   sed -ri -e '/CONFIG_TOYBOX/d' \
     -e "s/# (CONFIG_($NAME|${NAME}_.*${DEPENDS:+|$DEPENDS})) is not set/\1=y/" \
