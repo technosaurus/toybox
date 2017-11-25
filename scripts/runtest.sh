@@ -1,3 +1,4 @@
+#!/bin/sh
 # Simple test harness infrastructure
 #
 # Copyright 2005 by Rob Landley
@@ -49,14 +50,14 @@ SHOWSKIP=SKIP
 
 if tty -s <&1
 then
-  SHOWPASS="$(echo -e "\033[1;32m${SHOWPASS}\033[0m")"
-  SHOWFAIL="$(echo -e "\033[1;31m${SHOWFAIL}\033[0m")"
-  SHOWSKIP="$(echo -e "\033[1;33m${SHOWSKIP}\033[0m")"
+  SHOWPASS="$(printf '\033[1;32m%s\033[0m\n' "$SHOWPASS")"
+  SHOWFAIL="$(printf '\033[1;31m%s\033[0m\n' "$SHOWFAIL")"
+  SHOWSKIP="$(printf '\033[1;33m%s\033[0m\n' "$SHOWSKIP")"
 fi
 
 optional()
 {
-  option=`echo "$OPTIONFLAGS" | egrep "(^|:)$1(:|\$)"`
+  option=$(echo "$OPTIONFLAGS" | grep -E "(^|:)$1(:|\$)")
   # Not set?
   if [ -z "$1" ] || [ -z "$OPTIONFLAGS" ] || [ ${#option} -ne 0 ]
   then
@@ -92,9 +93,9 @@ testing()
     return 0
   fi
 
-  echo -ne "$3" > expected
-  echo -ne "$4" > input
-  echo -ne "$5" | ${EVAL:-eval} "$2" > actual
+  printf '%s' "$3" > expected
+  printf '%s' "$4" > input
+  printf '%s' "$5" | ${EVAL:-eval} "$2" > actual
   RETVAL=$?
 
   # Catch segfaults
@@ -104,14 +105,14 @@ testing()
   DIFF="$(diff -au${NOSPACE:+b} expected actual)"
   if [ ! -z "$DIFF" ]
   then
-    FAILCOUNT=$[$FAILCOUNT+1]
+    FAILCOUNT=$(FAILCOUNT+1)
     echo "$SHOWFAIL: $NAME"
     if [ -n "$VERBOSE" ]
     then
       [ ! -z "$4" ] && echo "echo -ne \"$4\" > input"
       echo "echo -ne '$5' |$EVAL $2"
       echo "$DIFF"
-      [ "$VERBOSE" == fail ] && exit 1
+      [ "$VERBOSE" = fail ] && exit 1
     fi
   else
     echo "$SHOWPASS: $NAME"
@@ -139,24 +140,27 @@ mkchroot()
 {
   [ $# -lt 2 ] && return
 
-  echo -n .
+  printf '.'
 
   dest=$1
   shift
   for i in "$@"
   do
-    [ "${i:0:1}" == "/" ] || i=$(which $i)
+    case "$i" in
+    /*);;
+    *)i=$(which $i);;
+    esac
     [ -f "$dest/$i" ] && continue
     if [ -e "$i" ]
     then
-      d=`echo "$i" | grep -o '.*/'` &&
+      d=$(echo "$i" | grep -o '.*/') &&
       mkdir -p "$dest/$d" &&
       cat "$i" > "$dest/$i" &&
       chmod +x "$dest/$i"
     else
       echo "Not found: $i"
     fi
-    mkchroot "$dest" $(ldd "$i" | egrep -o '/.* ')
+    mkchroot "$dest" "$(ldd "$i" | grep -Eo '/.* ')"
   done
 }
 
@@ -168,13 +172,15 @@ dochroot()
 {
   mkdir tmpdir4chroot
   mount -t ramfs tmpdir4chroot tmpdir4chroot
-  mkdir -p tmpdir4chroot/{etc,sys,proc,tmp,dev}
+  for f in etc sys proc tmp dev; do
+    mkdir -p tmpdir4chroot/$f
+  done
   cp -L testing.sh tmpdir4chroot
 
   # Copy utilities from command line arguments
 
-  echo -n "Setup chroot"
-  mkchroot tmpdir4chroot $*
+  printf "Setup chroot"
+  mkchroot tmpdir4chroot $@
   echo
 
   mknod tmpdir4chroot/dev/tty c 5 0
