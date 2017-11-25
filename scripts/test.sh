@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/bin/sh
 
 TOPDIR="$PWD"
-FILES="$PWD"/tests/files
+FILES="${PWD}/tests/files"
 
 trap 'kill $(jobs -p) 2>/dev/null; exit 1' INT
 
@@ -32,7 +32,7 @@ do_test()
   CMDNAME="${CMDNAME%.test}"
   if [ -z "$TEST_HOST" ]
   then
-    [ -z "$2" ] && C="$(readlink -f ../$CMDNAME)" || C="$(which $CMDNAME)"
+    [ -z "$2" ] && C="$(readlink -f "../$CMDNAME")" || C="$(which "$CMDNAME")"
   else
     C="$CMDNAME"
   fi
@@ -48,7 +48,7 @@ if [ $# -ne 0 ]
 then
   for i in "$@"
   do
-    do_test "$TOPDIR"/tests/$i.test
+    do_test "$TOPDIR/tests/$i.test"
   done
 else
   for i in "$TOPDIR"/tests/*.test
