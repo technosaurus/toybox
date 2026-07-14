@@ -1,0 +1,31 @@
+# Config.in for the X11 applet collection
+
+config XFBDEV
+  bool "Xfbdev"
+  default y
+  help
+    usage: Xfbdev [-screen WIDTHxHEIGHTxDEPTH] [-mouse DEV]
+
+    A minimalist, standalone TinyX-based framebuffer X11 Server.
+    Communicates directly with /dev/fb0 and /dev/input/event*.
+
+config JWM
+  bool "jwm"
+  default y
+  depends on XFBDEV
+  help
+    usage: jwm [-display DISPLAY]
+
+    Joe's Window Manager. A lightweight, clean X11 window manager
+    that handles borders, simple menus, and window placement.
+
+config ST
+  bool "st"
+  default y
+  depends on XFBDEV
+  help
+    usage: st [-font FONT] [-geom GEOMETRY] [-e COMMAND...]
+
+    The Simple Terminal emulator for X, optimized for low footprint
+    and embedded environments.
+    
